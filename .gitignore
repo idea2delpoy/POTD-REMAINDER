@@ -1,0 +1,62 @@
+# -------------------------
+# Python cache / compiled
+# -------------------------
+__pycache__/
+*.py[cod]
+*$py.class
+
+# -------------------------
+# Virtual environments
+# -------------------------
+venv/
+env/
+.venv/
+
+# -------------------------
+# Environment variables / secrets
+# -------------------------
+.env
+.env.*
+
+# -------------------------
+# PyInstaller build files
+# -------------------------
+build/
+dist/
+*.spec
+
+# -------------------------
+# Logs
+# -------------------------
+*.log
+
+# -------------------------
+# OS-specific files
+# -------------------------
+.DS_Store
+Thumbs.db
+
+# -------------------------
+# Editor / IDE files
+# -------------------------
+.vscode/
+.idea/
+*.swp
+
+# -------------------------
+# Runtime generated data
+# (User-specific, DO NOT COMMIT)
+# -------------------------
+storage/user_config.json
+storage/schedules.json
+
+# -------------------------
+# Backend runtime artifacts
+# -------------------------
+backend/database.db
+backend/__pycache__/
+
+# -------------------------
+# Installer output
+# -------------------------
+installer/
