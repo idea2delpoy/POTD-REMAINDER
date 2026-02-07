@@ -14,6 +14,7 @@ Solve it here:
 {problem_url}
 
 Happy coding 🚀
+from idea2deploy
 """
 
     send_email(email, subject, body)

@@ -10,6 +10,10 @@ SENDER_EMAIL = os.getenv("SENDER_EMAIL")
 
 
 def send_email(to_email, subject, body):
+    if not SENDGRID_API_KEY or not SENDER_EMAIL:
+        print("❌ SendGrid not configured")
+        return
+
     message = Mail(
         from_email=SENDER_EMAIL,
         to_emails=to_email,

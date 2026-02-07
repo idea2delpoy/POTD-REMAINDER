@@ -4,7 +4,7 @@ import threading
 import time
 import pytz
 
-from db import SessionLocal, init_db, User, Schedule
+from db import init_db, get_conn
 from reminder import send_missed_potd_email
 
 app = FastAPI()
@@ -26,93 +26,105 @@ def sync_schedules(payload: dict):
     email = payload.get("email")
     schedules = payload.get("schedules", [])
 
-    db = SessionLocal()
+    if not email:
+        return {"status": "error", "message": "email required"}
 
-    try:
-        user = db.query(User).filter(User.email == email).first()
-        if not user:
-            user = User(email=email)
-            db.add(user)
-            db.commit()
-            db.refresh(user)
+    conn = get_conn()
+    cur = conn.cursor()
 
-        # Update last_seen
-        user.last_seen = datetime.utcnow()
+    cur.execute("""
+    INSERT INTO users (email, last_seen)
+    VALUES (?, ?)
+    ON CONFLICT(email) DO UPDATE SET last_seen=excluded.last_seen
+    """, (email, datetime.utcnow().isoformat()))
 
-        # Replace schedules
-        db.query(Schedule).filter(Schedule.user_id == user.id).delete()
+    cur.execute("DELETE FROM schedules WHERE user_email=?", (email,))
 
-        for s in schedules:
-            db.add(Schedule(
-                user_id=user.id,
-                platform=s.get("platform"),
-                time=s.get("time"),
-                repeat=s.get("repeat"),
-                enabled=s.get("enabled", True),
-                last_executed=s.get("last_executed")
-            ))
+    for s in schedules:
+        cur.execute("""
+        INSERT INTO schedules (user_email, platform, time, repeat, enabled, last_executed)
+        VALUES (?, ?, ?, ?, ?, ?)
+        """, (
+            email,
+            s.get("platform"),
+            s.get("time"),
+            s.get("repeat"),
+            1 if s.get("enabled", True) else 0,
+            s.get("last_executed")
+        ))
 
-        db.commit()
-        return {"status": "ok"}
+    conn.commit()
+    conn.close()
 
-    finally:
-        db.close()
+    return {"status": "ok"}
 
 
 def get_problem_url(platform):
     if platform == "leetcode":
         return "https://leetcode.com/problemset/all/"
-    elif platform == "gfg":
+    if platform == "gfg":
         return "https://practice.geeksforgeeks.org/problem-of-the-day"
     return ""
 
 
 def check_missed_schedules():
     while True:
-        db = SessionLocal()
         try:
+            conn = get_conn()
+            cur = conn.cursor()
+
             now_ist = datetime.now(IST)
             today = now_ist.strftime("%Y-%m-%d")
 
-            users = db.query(User).all()
+            users = cur.execute("SELECT email, last_seen FROM users").fetchall()
 
-            for user in users:
-                last_seen_utc = user.last_seen
+            for u in users:
+                email = u["email"]
+                last_seen_utc = u["last_seen"]
+
                 if not last_seen_utc:
                     continue
 
-                last_seen_ist = last_seen_utc.replace(tzinfo=pytz.utc).astimezone(IST)
+                last_seen_ist = datetime.fromisoformat(last_seen_utc).replace(
+                    tzinfo=pytz.utc
+                ).astimezone(IST)
 
-                for task in user.schedules:
-                    if not task.enabled:
-                        continue
+                schedules = cur.execute(
+                    "SELECT * FROM schedules WHERE user_email=? AND enabled=1",
+                    (email,)
+                ).fetchall()
 
+                for task in schedules:
                     try:
                         scheduled_time_ist = IST.localize(
-                            datetime.strptime(f"{today} {task.time}", "%Y-%m-%d %H:%M")
+                            datetime.strptime(f"{today} {task['time']}", "%Y-%m-%d %H:%M")
                         )
-                    except Exception:
+                    except:
                         continue
 
                     if (
                         now_ist > scheduled_time_ist
-                        and task.last_executed != today
+                        and task["last_executed"] != today
                         and last_seen_ist < scheduled_time_ist
                     ):
                         send_missed_potd_email(
-                            email=user.email,
-                            platform=task.platform,
-                            scheduled_time=task.time,
-                            problem_url=get_problem_url(task.platform)
+                            email=email,
+                            platform=task["platform"],
+                            scheduled_time=task["time"],
+                            problem_url=get_problem_url(task["platform"])
                         )
 
-                        task.last_executed = today
-                        if task.repeat == "once":
-                            task.enabled = False
+                        cur.execute(
+                            "UPDATE schedules SET last_executed=? WHERE id=?",
+                            (today, task["id"])
+                        )
 
-            db.commit()
+                        if task["repeat"] == "once":
+                            cur.execute("UPDATE schedules SET enabled=0 WHERE id=?", (task["id"],))
 
-        finally:
-            db.close()
+            conn.commit()
+            conn.close()
+        except Exception as e:
+            print("Scheduler error:", e)
 
         time.sleep(60)

@@ -1,42 +1,39 @@
 # backend/db.py
-from sqlalchemy import create_engine, Column, Integer, String, Boolean, DateTime, ForeignKey
-from sqlalchemy.orm import declarative_base, sessionmaker, relationship
-from datetime import datetime
+import sqlite3
 
-DATABASE_URL = "sqlite:///./potd.db"
-
-engine = create_engine(
-    DATABASE_URL,
-    connect_args={"check_same_thread": False}  # needed for SQLite + threads
-)
-
-SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False)
-Base = declarative_base()
+DB_PATH = "potd.db"
 
 
-class User(Base):
-    __tablename__ = "users"
-
-    id = Column(Integer, primary_key=True, index=True)
-    email = Column(String, unique=True, index=True, nullable=False)
-    last_seen = Column(DateTime, default=datetime.utcnow)
-
-    schedules = relationship("Schedule", back_populates="user", cascade="all, delete-orphan")
-
-
-class Schedule(Base):
-    __tablename__ = "schedules"
-
-    id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id"))
-    platform = Column(String)
-    time = Column(String)  # "HH:MM"
-    repeat = Column(String)  # "daily" / "once"
-    enabled = Column(Boolean, default=True)
-    last_executed = Column(String, nullable=True)  # "YYYY-MM-DD"
-
-    user = relationship("User", back_populates="schedules")
+def get_conn():
+    conn = sqlite3.connect(DB_PATH, check_same_thread=False)
+    conn.row_factory = sqlite3.Row
+    return conn
 
 
 def init_db():
-    Base.metadata.create_all(bind=engine)
+    conn = get_conn()
+    cur = conn.cursor()
+
+    cur.execute("""
+    CREATE TABLE IF NOT EXISTS users (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        email TEXT UNIQUE NOT NULL,
+        last_seen TEXT
+    )
+    """)
+
+    cur.execute("""
+    CREATE TABLE IF NOT EXISTS schedules (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_email TEXT,
+        platform TEXT,
+        time TEXT,
+        repeat TEXT,
+        enabled INTEGER,
+        last_executed TEXT,
+        FOREIGN KEY(user_email) REFERENCES users(email)
+    )
+    """)
+
+    conn.commit()
+    conn.close()
