@@ -1,3 +1,6 @@
+Here is the complete, raw Markdown code. You can copy everything inside the block below and paste it directly into your `README.md` file.
+
+```markdown
 # 🕒 POTD Scheduler  
 **Automate your daily coding practice. Never miss a LeetCode or GFG Problem of the Day again.**
 
@@ -64,49 +67,72 @@ If your PC is on, the app **auto-opens** the problem in your preferred Chrome pr
 ```bash
 git clone [https://github.com/idea2delpoy/POTD-REMAINDER.git](https://github.com/idea2delpoy/POTD-REMAINDER.git)
 cd POTD-REMAINDER
-2. Run Backend
-Bash
+
+```
+
+### **2. Run Backend**
+
+```bash
 cd backend
 pip install -r requirements.txt
 # Create a .env file with:
 # SENDGRID_API_KEY=your_key
 # SENDER_EMAIL=your_verified_email
 python -m uvicorn main:app --reload
-3. Run Desktop App
-Bash
+
+```
+
+### **3. Run Desktop App**
+
+```bash
 # In the root directory
 pip install -r requirements.txt
 python app.py
-4. Build the Executable
-Bash
+
+```
+
+### **4. Build the Executable**
+
+```bash
 python -m PyInstaller --onefile --noconsole --name "POTD-Scheduler" app.py
-❌ Uninstallation
-Standard: Control Panel → Programs → Uninstall → POTD Scheduler.
 
-Clean Up: To remove local logs and configs, delete:
+```
 
-C:\Users\<YourName>\AppData\Local\POTD_Scheduler
+---
 
-⚠️ Known Limitations
-OS: Windows only.
+## ❌ Uninstallation
 
-Browser: Requires Google Chrome.
+* **Standard:** Control Panel → Programs → Uninstall → **POTD Scheduler**.
+* **Clean Up:** To remove local logs and configs, delete:
+`C:\Users\<YourName>\AppData\Local\POTD_Scheduler`
 
-Email: Check your Spam folder if notifications don't appear initially.
+---
 
-🗺 Future Roadmap
-[ ] Support for macOS and Linux.
+## ⚠️ Known Limitations
 
-[ ] Auto-update mechanism.
+* **OS:** Windows only.
+* **Browser:** Requires Google Chrome.
+* **Email:** Check your Spam folder if notifications don't appear initially.
 
-[ ] Windows native toast notifications.
+---
 
-[ ] Integration with Codeforces.
+## 🗺 Future Roadmap
 
-🧑‍💻 Author
-Built by [Idea2Deploy] A productivity tool for the developer community.
+* [ ] Support for macOS and Linux.
+* [ ] Auto-update mechanism.
+* [ ] Windows native toast notifications.
+* [ ] Integration with Codeforces.
 
+---
+
+## 🧑‍💻 Author
+
+Built by **[Idea2Deploy]** *A productivity tool for the developer community.*
+
+```
 
 ---
 
 **Would you like me to generate a license file (MIT or Apache) to include in your repository as well?**
+
+```
