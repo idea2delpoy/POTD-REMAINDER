@@ -1,6 +1,3 @@
-Here is the complete, raw Markdown code. You can copy everything inside the block below and paste it directly into your `README.md` file.
-
-```markdown
 # 🕒 POTD Scheduler  
 **Automate your daily coding practice. Never miss a LeetCode or GFG Problem of the Day again.**
 
@@ -67,7 +64,6 @@ If your PC is on, the app **auto-opens** the problem in your preferred Chrome pr
 ```bash
 git clone [https://github.com/idea2delpoy/POTD-REMAINDER.git](https://github.com/idea2delpoy/POTD-REMAINDER.git)
 cd POTD-REMAINDER
-
 ```
 
 ### **2. Run Backend**
@@ -128,6 +124,3 @@ python -m PyInstaller --onefile --noconsole --name "POTD-Scheduler" app.py
 ## 🧑‍💻 Author
 
 Built by **[Idea2Deploy]** *A productivity tool for the developer community.*
-
-```
-```
