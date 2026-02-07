@@ -48,7 +48,7 @@ If your PC is on, the app **auto-opens** the problem in your preferred Chrome pr
 ## ⬇️ Download & Installation
 
 ### **For End Users**
-1.  **Download:** [Setup-POTD-Scheduler.exe](https://www.mediafire.com/file/14jpfg2u4ytkrws/Setup-POTD-Scheduler.exe/file)
+1.  **Download:** [Setup-POTD-Scheduler.exe](https://drive.google.com/file/d/1ynFFOVp2dOjXsnrjPqn1jRXsRjdUfcoG/view?usp=drive_link)
 2.  **Install:** Run the installer and follow the wizard.
 3.  **Setup:**
     * Select your Chrome path (usually auto-detected).
