@@ -130,9 +130,4 @@ python -m PyInstaller --onefile --noconsole --name "POTD-Scheduler" app.py
 Built by **[Idea2Deploy]** *A productivity tool for the developer community.*
 
 ```
-
----
-
-**Would you like me to generate a license file (MIT or Apache) to include in your repository as well?**
-
 ```
