@@ -2,85 +2,64 @@ from fastapi import FastAPI
 from datetime import datetime
 import threading
 import time
+import pytz
 
+from db import SessionLocal, init_db, User, Schedule
 from reminder import send_missed_potd_email
 
 app = FastAPI()
+IST = pytz.timezone("Asia/Kolkata")
 
-# In-memory store (later replace with DB)
-# {
-#   email: {
-#       "schedules": [...],
-#       "last_seen": datetime
-#   }
-# }
-USER_DATA = {}
+
+@app.on_event("startup")
+def startup():
+    init_db()
+    threading.Thread(
+        target=check_missed_schedules,
+        daemon=True,
+        name="Missed-Schedule-Checker"
+    ).start()
 
 
 @app.post("/sync/schedules")
 def sync_schedules(payload: dict):
     email = payload.get("email")
-    schedules = payload.get("schedules")
+    schedules = payload.get("schedules", [])
 
-    USER_DATA[email] = {
-        "schedules": schedules,
-        "last_seen": datetime.utcnow()
-    }
+    db = SessionLocal()
 
-    return {"status": "ok"}
+    try:
+        user = db.query(User).filter(User.email == email).first()
+        if not user:
+            user = User(email=email)
+            db.add(user)
+            db.commit()
+            db.refresh(user)
 
+        # Update last_seen
+        user.last_seen = datetime.utcnow()
 
-def check_missed_schedules():
-    """
-    Runs continuously in background.
-    Sends email if:
-    - scheduled time passed
-    - task not executed today
-    - app was not running at scheduled time
-    """
-    while True:
-        now = datetime.now()
-        today = now.strftime("%Y-%m-%d")
+        # Replace schedules
+        db.query(Schedule).filter(Schedule.user_id == user.id).delete()
 
-        for email, data in USER_DATA.items():
-            schedules = data["schedules"]
-            last_seen = data["last_seen"]
+        for s in schedules:
+            db.add(Schedule(
+                user_id=user.id,
+                platform=s.get("platform"),
+                time=s.get("time"),
+                repeat=s.get("repeat"),
+                enabled=s.get("enabled", True),
+                last_executed=s.get("last_executed")
+            ))
 
-            for task in schedules:
-                if not task.get("enabled"):
-                    continue
+        db.commit()
+        return {"status": "ok"}
 
-                try:
-                    scheduled_time = datetime.strptime(
-                        f"{today} {task['time']}",
-                        "%Y-%m-%d %H:%M"
-                    )
-                except Exception:
-                    continue
-
-                # ❌ App/System OFF at scheduled time → send email
-                if (
-                    now > scheduled_time
-                    and task.get("last_executed") != today
-                    and last_seen < scheduled_time
-                ):
-                    send_missed_potd_email(
-                        email=email,
-                        platform=task["platform"],
-                        scheduled_time=task["time"],
-                        problem_url=get_problem_url(task["platform"])
-                    )
-
-                    # Mark as handled to avoid duplicate emails
-                    task["last_executed"] = today
-
-        time.sleep(120)  # check every 2 minutes
+    finally:
+        db.close()
 
 
 def get_problem_url(platform):
-    """
-    Fallback URL (later replace with exact POTD link)
-    """
     if platform == "leetcode":
         return "https://leetcode.com/problemset/all/"
     elif platform == "gfg":
@@ -88,9 +67,52 @@ def get_problem_url(platform):
     return ""
 
 
-@app.on_event("startup")
-def start_background_checker():
-    threading.Thread(
-        target=check_missed_schedules,
-        daemon=True
-    ).start()
+def check_missed_schedules():
+    while True:
+        db = SessionLocal()
+        try:
+            now_ist = datetime.now(IST)
+            today = now_ist.strftime("%Y-%m-%d")
+
+            users = db.query(User).all()
+
+            for user in users:
+                last_seen_utc = user.last_seen
+                if not last_seen_utc:
+                    continue
+
+                last_seen_ist = last_seen_utc.replace(tzinfo=pytz.utc).astimezone(IST)
+
+                for task in user.schedules:
+                    if not task.enabled:
+                        continue
+
+                    try:
+                        scheduled_time_ist = IST.localize(
+                            datetime.strptime(f"{today} {task.time}", "%Y-%m-%d %H:%M")
+                        )
+                    except Exception:
+                        continue
+
+                    if (
+                        now_ist > scheduled_time_ist
+                        and task.last_executed != today
+                        and last_seen_ist < scheduled_time_ist
+                    ):
+                        send_missed_potd_email(
+                            email=user.email,
+                            platform=task.platform,
+                            scheduled_time=task.time,
+                            problem_url=get_problem_url(task.platform)
+                        )
+
+                        task.last_executed = today
+                        if task.repeat == "once":
+                            task.enabled = False
+
+            db.commit()
+
+        finally:
+            db.close()
+
+        time.sleep(60)

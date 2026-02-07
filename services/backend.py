@@ -1,6 +1,6 @@
 import requests
 
-API = "http://localhost:8000"  # change after deployment
+API = "https://potd-remainder.onrender.com"  # change after deployment
 
 def sync(email, schedules):
     try:

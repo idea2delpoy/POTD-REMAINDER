@@ -1,11 +1,12 @@
 import tkinter as tk
-from ui.theme import *
 from utils.file_utils import read_json, write_json
+from utils.app_paths import get_storage_path
 from services.chrome_profiles import detect_chrome_profiles
 from services.backend import sync
 from ui.time_picker import TimePicker
+from ui.theme import *
 
-SCHEDULE_FILE = "storage/schedules.json"
+SCHEDULE_FILE = get_storage_path("schedules.json")
 
 
 class ScheduleEditor(tk.Frame):
@@ -13,20 +14,29 @@ class ScheduleEditor(tk.Frame):
         super().__init__(master, bg=BG)
         self.platform = platform
 
-        # ---- Title ----
-        tk.Label(
+        # 🔒 IMPORTANT: use grid at root level
+        self.grid_rowconfigure(0, weight=1)
+        self.grid_rowconfigure(1, weight=0)
+        self.grid_columnconfigure(0, weight=1)
+
+        # ---------- TITLE ----------
+        title = tk.Label(
             self,
             text=f"{platform.upper()} Reminder",
             font=("Segoe UI", 20, "bold"),
             fg=TEXT,
             bg=BG
-        ).pack(pady=(20, 10))
+        )
+        title.grid(row=0, column=0, pady=(15, 5), sticky="n")
 
-        # ---- Scrollable Area ----
-        canvas = tk.Canvas(self, bg=BG, highlightthickness=0)
+        # ---------- SCROLLABLE AREA ----------
+        container = tk.Frame(self, bg=BG)
+        container.grid(row=0, column=0, sticky="nsew", pady=(60, 0))
+
+        canvas = tk.Canvas(container, bg=BG, highlightthickness=0)
         canvas.pack(side="left", fill="both", expand=True)
 
-        scrollbar = tk.Scrollbar(self, orient="vertical", command=canvas.yview)
+        scrollbar = tk.Scrollbar(container, orient="vertical", command=canvas.yview)
         scrollbar.pack(side="right", fill="y")
 
         canvas.configure(yscrollcommand=scrollbar.set)
@@ -39,9 +49,9 @@ class ScheduleEditor(tk.Frame):
             lambda e: canvas.configure(scrollregion=canvas.bbox("all"))
         )
 
-        # ---- Card ----
+        # ---------- CARD ----------
         card = tk.Frame(content, bg=CARD)
-        card.pack(padx=80, pady=10, fill="x")
+        card.pack(padx=80, pady=20, fill="x")
 
         self.section(card, "Time")
         self.time_picker = TimePicker(card)
@@ -62,30 +72,31 @@ class ScheduleEditor(tk.Frame):
         else:
             tk.Label(card, text="No Chrome profiles found", fg="red", bg=CARD).pack()
 
-        # ---- Buttons (ALWAYS VISIBLE) ----
-        btn_frame = tk.Frame(self, bg=BG)
-        btn_frame.pack(pady=15)
+        # ---------- FIXED BOTTOM ACTION BAR ----------
+        bottom = tk.Frame(self, bg=CARD, height=70)
+        bottom.grid(row=1, column=0, sticky="ew")
+        bottom.grid_propagate(False)
 
         tk.Button(
-            btn_frame,
-            text="Save Schedule",
+            bottom,
+            text="Save Configuration",
             bg=BUTTON,
             fg="white",
-            font=("Segoe UI", 11, "bold"),
+            font=("Segoe UI", 12, "bold"),
             relief="flat",
-            width=18,
             command=self.save
-        ).pack(pady=(0, 8))
+        ).pack(pady=(10, 5), padx=120, fill="x")
 
         tk.Button(
-            btn_frame,
+            bottom,
             text="← Back",
-            bg=BG,
+            bg=CARD,
             fg=MUTED,
             relief="flat",
             command=self.back
         ).pack()
 
+    # ---------- HELPERS ----------
     def section(self, parent, text):
         tk.Label(
             parent,
@@ -107,6 +118,7 @@ class ScheduleEditor(tk.Frame):
             activebackground=CARD
         ).pack(anchor="w", padx=20)
 
+    # ---------- ACTIONS ----------
     def save(self):
         schedules = read_json(SCHEDULE_FILE, [])
         schedules = [s for s in schedules if s["platform"] != self.platform]
